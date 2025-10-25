@@ -1,0 +1,42 @@
+name: Deploy to FTP
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  ftp-deploy:
+    name: FTP Deploy
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        server_dir:
+          - /public_html/demo/wp-content/plugins/gift-shuffle-secret-santa/
+          - /public_html/en/wp-content/plugins/gift-shuffle-secret-santa/
+          - /public_html/wp-content/plugins/gift-shuffle-secret-santa/
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload to FTP (${{ matrix.server_dir }})
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          local-dir: ./
+          server-dir: ${{ matrix.server_dir }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github*
+            **/.github*/**
+            **/node_modules/**
+            **/*.md
+            **/README*
+            **/tests/**
+            **/.ftp-deploy-sync-state.json
