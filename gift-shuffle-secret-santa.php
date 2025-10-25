@@ -27,6 +27,9 @@ function bcss_redirect_or_flag($url,$notice='',$msg=''){
     echo '<script>try{location.replace('.wp_json_encode($url).')}catch(e){}</script>';
     echo '<noscript><meta http-equiv="refresh" content="0;url='.esc_attr($url).'"></noscript>';
 }
+function bcss_supported_currencies(){
+    return ['PLN','EUR','USD','GBP'];
+}
 
 /** I18n */
 add_action('plugins_loaded', function(){
@@ -64,6 +67,11 @@ function bcss_default_labels(){
         'gift_shop_btn_amazon'      => 'Search on Amazon',
         'gift_shop_btn_allegro'     => 'Search on Allegro',
         'gift_shop_disclaimer'      => 'Links may be affiliate. We may earn a commission.',
+        // Gift info
+        'gift_info_title'           => 'Gift exchange details',
+        'gift_info_date_label'      => 'Gift exchange date:',
+        'gift_info_budget_label'    => 'Budget:',
+        'gift_info_not_set'         => 'Details will appear here once the organizer shares them.',
     ];
 }
 function bcss_default_affiliate(){
@@ -97,6 +105,9 @@ function bcss_get_options(){
         'version'                 => BCSS_VER,
         'labels'                  => bcss_default_labels(),
         'affiliate'               => bcss_default_affiliate(),
+        'gift_exchange_date'      => '',
+        'gift_budget'             => '',
+        'gift_budget_currency'    => 'PLN',
     ];
     $opts = get_option('bcss_options',[]);
     if(!is_array($opts)) $opts=[];
@@ -149,7 +160,7 @@ add_action('init',function(){
  * ADMIN MENUS
  * ------------------------------------------------------------------------- */
 add_action('admin_menu',function(){
-    add_menu_page(__('Secret Santa Lottery (BeeClear)',BCSS_TD),__('Secret Santa Lottery (BeeClear)',BCSS_TD),'read','bcss_dashboard','bcss_render_dashboard_page','dashicons-groups',56);
+    add_menu_page(__('Gift Shuffle (BeeClear)',BCSS_TD),__('Gift Shuffle (BeeClear)',BCSS_TD),'read','bcss_dashboard','bcss_render_dashboard_page','dashicons-groups',56);
     add_submenu_page('bcss_dashboard',__('My panel',BCSS_TD),__('My panel',BCSS_TD),'read','bcss_my_panel','bcss_render_my_panel_page');
     add_submenu_page('bcss_dashboard',__('Participants & Draw',BCSS_TD),__('Participants & Draw',BCSS_TD),'manage_options','bcss_participants','bcss_render_participants_page');
     add_submenu_page('bcss_dashboard',__('Global settings',BCSS_TD),__('Global settings',BCSS_TD),'manage_options','bcss_global','bcss_render_global_settings_page');
@@ -165,7 +176,7 @@ add_action('admin_menu',function(){ remove_submenu_page('bcss_dashboard','bcss_d
 function bcss_render_dashboard_page(){
     if(!current_user_can('read')) wp_die(esc_html__('Access denied.',BCSS_TD));
     $labels=bcss_get_labels();
-    echo '<div class="wrap"><h1>Secret Santa Lottery (BeeClear)</h1>';
+    echo '<div class="wrap"><h1>Gift Shuffle (BeeClear)</h1>';
     echo '<p>'.esc_html__('Use the panel below to manage your Secret Santa experience.',BCSS_TD).'</p>';
     echo '<p><a class="button button-primary" href="'.esc_url(bcss_admin_url('bcss_my_panel')).'">'.esc_html($labels['open_panel']).'</a></p>';
     echo '<hr/><p><small>Made by <a href="https://beeclear.pl" target="_blank" rel="noopener">BeeClear</a></small></p></div>';
@@ -281,6 +292,25 @@ function bcss_render_my_panel_page(){
     if(!current_user_can('read')) wp_die(esc_html__('Access denied.',BCSS_TD));
     $labels=bcss_get_labels();
     $o=bcss_get_options(); $aff=$o['affiliate'];
+    $gift_date_raw = isset($o['gift_exchange_date']) ? $o['gift_exchange_date'] : '';
+    $gift_budget_raw = isset($o['gift_budget']) ? $o['gift_budget'] : '';
+    $gift_currency = isset($o['gift_budget_currency']) ? strtoupper($o['gift_budget_currency']) : 'PLN';
+
+    $gift_date_display='';
+    if($gift_date_raw){
+        $timestamp=strtotime($gift_date_raw.' 00:00:00');
+        if($timestamp){ $gift_date_display=date_i18n(get_option('date_format'), $timestamp); }
+        else { $gift_date_display=$gift_date_raw; }
+    }
+
+    $gift_budget_display='';
+    if($gift_budget_raw!==''){
+        if(is_numeric($gift_budget_raw)){
+            $gift_budget_display=number_format_i18n((float)$gift_budget_raw, 2);
+        }else{
+            $gift_budget_display=$gift_budget_raw;
+        }
+    }
 
     $u=wp_get_current_user(); $my=(int)$u->ID;
     $giftee=(int)get_user_meta($my,'bcss_target_user',true);
@@ -304,6 +334,8 @@ function bcss_render_my_panel_page(){
     .bcss-card{background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px}
     .bcss-card h2{margin-top:0}
     .bcss-meta{color:#6c7781}
+    .bcss-info-card{margin-top:16px}
+    .bcss-info-card p{margin:0 0 6px}
     .bcss-chat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
     @media(max-width:1200px){.bcss-chat-grid{grid-template-columns:1fr}}
     .bcss-chat-card{background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:0;display:flex;flex-direction:column;overflow:hidden}
@@ -325,6 +357,19 @@ function bcss_render_my_panel_page(){
     </style>
     <div class="wrap bcss-panel-wrap">
         <h1><?php echo esc_html($labels['panel_title']); ?></h1>
+
+        <div class="bcss-card bcss-info-card">
+            <h2><?php echo esc_html($labels['gift_info_title']); ?></h2>
+            <?php if($gift_date_display): ?>
+                <p><strong><?php echo esc_html($labels['gift_info_date_label']); ?></strong> <?php echo esc_html($gift_date_display); ?></p>
+            <?php endif; ?>
+            <?php if($gift_budget_display!==''): ?>
+                <p><strong><?php echo esc_html($labels['gift_info_budget_label']); ?></strong> <?php echo esc_html(trim($gift_budget_display.' '.$gift_currency)); ?></p>
+            <?php endif; ?>
+            <?php if(!$gift_date_display && $gift_budget_display===''): ?>
+                <p class="bcss-meta"><em><?php echo esc_html($labels['gift_info_not_set']); ?></em></p>
+            <?php endif; ?>
+        </div>
 
         <div class="bcss-info-grid">
             <div class="bcss-card">
@@ -588,9 +633,30 @@ function bcss_render_global_settings_page(){
         check_admin_referer('bcss_save_global_action','bcss_save_global_nonce');
         $cleanup=!empty($_POST['bcss_cleanup_on_deactivation']);
         $wipe=!empty($_POST['bcss_wipe_messages_on_draw']);
+
+        $gift_date=isset($_POST['bcss_gift_exchange_date']) ? sanitize_text_field(wp_unslash($_POST['bcss_gift_exchange_date'])) : '';
+        if($gift_date && !preg_match('/^\d{4}-\d{2}-\d{2}$/',$gift_date)){ $gift_date=''; }
+
+        $gift_budget=isset($_POST['bcss_gift_budget']) ? sanitize_text_field(wp_unslash($_POST['bcss_gift_budget'])) : '';
+        if($gift_budget!==''){
+            $gift_budget=str_replace(',','.', $gift_budget);
+            if(!is_numeric($gift_budget)){ $gift_budget=''; }
+        }
+
+        $gift_currency = isset($_POST['bcss_gift_currency']) ? strtoupper(sanitize_text_field(wp_unslash($_POST['bcss_gift_currency']))) : 'PLN';
+        $currencies=bcss_supported_currencies();
+        if(!in_array($gift_currency,$currencies,true)){ $gift_currency=reset($currencies); }
+
         $new_labels=bcss_default_labels();
         foreach($new_labels as $k=>$v){ if(isset($_POST['bcss_label_'.$k])) $new_labels[$k]=sanitize_text_field(wp_unslash($_POST['bcss_label_'.$k])); }
-        bcss_update_options(['cleanup_on_deactivation'=>$cleanup,'wipe_messages_on_draw'=>$wipe,'labels'=>$new_labels]);
+        bcss_update_options([
+            'cleanup_on_deactivation'=>$cleanup,
+            'wipe_messages_on_draw'=>$wipe,
+            'labels'=>$new_labels,
+            'gift_exchange_date'=>$gift_date,
+            'gift_budget'=>$gift_budget,
+            'gift_budget_currency'=>$gift_currency,
+        ]);
         echo '<div class="notice notice-success is-dismissible"><p>'.esc_html__('Settings saved.',BCSS_TD).'</p></div>';
         $opts=bcss_get_options(); $labels=$opts['labels'];
     }
@@ -606,6 +672,21 @@ function bcss_render_global_settings_page(){
     echo '<table class="form-table" role="presentation"><tbody>';
     echo '<tr><th>'.esc_html__('Clean data on deactivation',BCSS_TD).'</th><td><label><input type="checkbox" name="bcss_cleanup_on_deactivation" value="1" '.checked(!empty($opts['cleanup_on_deactivation']),true,false).' /> '.esc_html__('Remove all plugin data when deactivated.',BCSS_TD).'</label></td></tr>';
     echo '<tr><th>'.esc_html__('Delete conversations on draw/reset',BCSS_TD).'</th><td><label><input type="checkbox" name="bcss_wipe_messages_on_draw" value="1" '.checked(!empty($opts['wipe_messages_on_draw']),true,false).' /> '.esc_html__('If enabled, all chat messages are removed when you run the draw or reset.',BCSS_TD).'</label></td></tr>';
+    echo '</tbody></table>';
+
+    $currencies=bcss_supported_currencies();
+    echo '<h2>'.esc_html__('Gift exchange information',BCSS_TD).'</h2>';
+    echo '<table class="form-table" role="presentation"><tbody>';
+    echo '<tr><th>'.esc_html__('Gift exchange date',BCSS_TD).'</th><td><input type="date" name="bcss_gift_exchange_date" value="'.esc_attr($opts['gift_exchange_date']).'" /> <p class="description">'.esc_html__('Participants will see this date in their panel.',BCSS_TD).'</p></td></tr>';
+    echo '<tr><th>'.esc_html__('Budget per person',BCSS_TD).'</th><td>';
+    echo '<input type="number" min="0" step="0.01" name="bcss_gift_budget" value="'.esc_attr($opts['gift_budget']).'" style="width:120px;" /> ';
+    echo '<select name="bcss_gift_currency">';
+    foreach($currencies as $currency){
+        echo '<option value="'.esc_attr($currency).'" '.selected($opts['gift_budget_currency'],$currency,false).'>'.esc_html($currency).'</option>';
+    }
+    echo '</select>';
+    echo '<p class="description">'.esc_html__('Define the recommended gift budget and currency shown to participants.',BCSS_TD).'</p>';
+    echo '</td></tr>';
     echo '</tbody></table>';
 
     echo '<h2>'.esc_html__('Interface labels (for translations)',BCSS_TD).'</h2><p class="description">'.esc_html__('Change UI texts used in the user panel, chats and emails.',BCSS_TD).'</p>';
