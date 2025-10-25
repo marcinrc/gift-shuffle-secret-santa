@@ -1,11 +1,11 @@
 <?php
 /*
-Plugin Name: Secret Santa Lottery for WordPress (BeeClear)
-Description: Secret Santa / Mikołajki – losowanie par, anonimowy czat (2 okna), wskazówki prezentowe, panel użytkownika i administratora, import/eksport, opcjonalny shortcode oraz moduł afiliacyjny (Amazon + Allegro).
+Plugin Name: Gitf Shuffle & Secret Santa (BeeClear)
+Description: Make Secret Santa effortless and fun: this plugin handles fair, conflict-free pair drawing, gives participants a secure anonymous 1:1 chat to swap hints, and streamlines everything with clear user/admin panels. Share gift ideas, track progress, and keep the surprise intact—plus import/export lists, embed with an optional shortcode, and even add affiliate suggestions (Amazon + Allegro) for easy, inspired shopping.
 Version: 4.3.0
 Author: BeeClear
 Author URI: https://beeclear.pl
-Text Domain: beeclear-secret-santa
+Text Domain: gift-shuffle-secret-santa
 Domain Path: /languages
 */
 
