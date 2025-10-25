@@ -45,7 +45,7 @@ function bcss_default_labels(){
         'who_i_gift'                => 'You will gift',
         'who_gifts_me'              => 'Who gifts you',
         'their_hints'               => 'Their hints:',
-        'your_hints_label'          => 'Your hints to your Secret Santa:',
+        'your_hints_label'          => 'Your hints to your Gift Shuffle partner:',
         'save_message'              => 'Save message',
         'no_assignment'             => 'You do not have an assigned person yet.',
         'no_hints'                  => 'No hints yet.',
@@ -53,11 +53,11 @@ function bcss_default_labels(){
         'gifter_chat_title'         => 'Chat with your gifter',
         'type_message_placeholder'  => 'Type a message…',
         'send'                      => 'Send',
-        'new_message_email_subject' => 'You have a new Secret Santa message',
-        'new_message_email_intro'   => 'You received a new anonymous message in Secret Santa.',
+        'new_message_email_subject' => 'You have a new Gift Shuffle message',
+        'new_message_email_intro'   => 'You received a new anonymous message in Gift Shuffle.',
         'open_panel'                => 'Open my panel',
-        'draw_started_email_subject'=> 'Secret Santa draw started',
-        'draw_started_email_body'   => 'Hi! The Secret Santa draw has started and you have been assigned someone. Open your panel: {panel_url}',
+        'draw_started_email_subject'=> 'Gift Shuffle draw started',
+        'draw_started_email_body'   => 'Hi! The Gift Shuffle draw has started and you have been assigned someone. Open your panel: {panel_url}',
         'separator_draw'            => '— New draw started on {date} —',
         'separator_reset'           => '— Reset performed on {date} —',
         // Affiliate widget
@@ -150,7 +150,7 @@ add_filter('plugin_action_links_'.plugin_basename(__FILE__),function($links){
 /** CPT for chat messages (no UI) */
 add_action('init',function(){
     register_post_type('bcss_msg',[
-        'labels'=>['name'=>'Secret Santa Messages'],
+        'labels'=>['name'=>'Gift Shuffle Messages'],
         'public'=>false,'show_ui'=>false,'supports'=>['editor','author'],
         'rewrite'=>false,'query_var'=>false,
     ]);
@@ -177,7 +177,7 @@ function bcss_render_dashboard_page(){
     if(!current_user_can('read')) wp_die(esc_html__('Access denied.',BCSS_TD));
     $labels=bcss_get_labels();
     echo '<div class="wrap"><h1>Gift Shuffle (BeeClear)</h1>';
-    echo '<p>'.esc_html__('Use the panel below to manage your Secret Santa experience.',BCSS_TD).'</p>';
+    echo '<p>'.esc_html__('Use the panel below to manage your Gift Shuffle experience.',BCSS_TD).'</p>';
     echo '<p><a class="button button-primary" href="'.esc_url(bcss_admin_url('bcss_my_panel')).'">'.esc_html($labels['open_panel']).'</a></p>';
     echo '<hr/><p><small>Made by <a href="https://beeclear.pl" target="_blank" rel="noopener">BeeClear</a></small></p></div>';
 }
@@ -900,14 +900,14 @@ function bcss_import_data_from_json($json){
  * FRONTEND SHORTCODES
  * ------------------------------------------------------------------------- */
 add_shortcode('beeclear_secret_santa',function($atts){
-    if(!is_user_logged_in()) return '<div class="bcss-wrapper bcss-card"><p class="bcss-meta">'.esc_html__('Please log in to view your Secret Santa assignment.',BCSS_TD).'</p></div>';
+    if(!is_user_logged_in()) return '<div class="bcss-wrapper bcss-card"><p class="bcss-meta">'.esc_html__('Please log in to view your Gift Shuffle assignment.',BCSS_TD).'</p></div>';
     $o=bcss_get_options();
     if(!empty($o['load_default_styles'])){ wp_register_style('bcss-front',false,[],BCSS_VER); wp_add_inline_style('bcss-front',bcss_default_front_css()."\n".$o['custom_css']); wp_enqueue_style('bcss-front'); }
     elseif(!empty($o['custom_css'])){ wp_register_style('bcss-front-custom',false,[],BCSS_VER); wp_add_inline_style('bcss-front-custom',$o['custom_css']); wp_enqueue_style('bcss-front-custom'); }
     $labels=bcss_get_labels(); $u=wp_get_current_user(); $target=(int)get_user_meta($u->ID,'bcss_target_user',true);
     ob_start(); ?>
     <div class="bcss-wrapper"><div class="bcss-card">
-        <h3 class="bcss-title"><?php echo esc_html__('My Secret Santa',BCSS_TD); ?></h3>
+        <h3 class="bcss-title"><?php echo esc_html__('My Gift Shuffle',BCSS_TD); ?></h3>
         <?php if($target): $t=get_user_by('id',$target); if($t): ?>
             <p class="bcss-meta"><?php echo sprintf(esc_html__('You will gift: %s',BCSS_TD),esc_html($t->display_name)); ?></p>
             <?php $hints=get_user_meta($t->ID,'bcss_message_to_santa',true); if(!empty($hints)): ?>
