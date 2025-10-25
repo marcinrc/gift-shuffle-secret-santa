@@ -39,4 +39,4 @@ jobs:
             **/*.md
             **/README*
             **/tests/**
-            **/.ftp-deploy-sync-state.json
+            **/.ftp-deploy-sync-state.json*
